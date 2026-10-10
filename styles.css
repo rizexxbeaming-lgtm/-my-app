@@ -119,11 +119,12 @@ button {
 
 .hero {
   position: relative;
-  min-height: min(72vh, 560px);
+  min-height: min(46vh, 380px);
   display: grid;
   align-content: start;
-  gap: 14px;
-  padding-top: 8px;
+  gap: 12px;
+  padding-top: 4px;
+  padding-bottom: 8px;
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -131,7 +132,7 @@ button {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(3.4rem, 14vw, 4.6rem);
+  font-size: clamp(3.1rem, 13vw, 4.2rem);
   line-height: 0.9;
   letter-spacing: -0.06em;
   background: linear-gradient(120deg, #fff 10%, var(--cyan) 45%, var(--pink) 85%);
@@ -214,10 +215,10 @@ button {
 
 .ring-wrap {
   position: absolute;
-  right: -6px;
-  bottom: 8px;
-  width: 128px;
-  height: 128px;
+  right: -4px;
+  top: 96px;
+  width: 112px;
+  height: 112px;
   animation: floaty 5s ease-in-out infinite;
 }
 
@@ -551,7 +552,7 @@ button {
   bottom: 0;
   z-index: 30;
   width: min(100%, 480px);
-  transform: translate(-50%, 110%);
+  transform: translate(-50%, calc(100% + 40px));
   padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
   border-radius: 28px 28px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -560,6 +561,11 @@ button {
     linear-gradient(180deg, rgba(28, 10, 42, 0.96), rgba(8, 2, 16, 0.98));
   box-shadow: 0 -20px 60px rgba(255, 61, 154, 0.15);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.sheet.is-open {
+  pointer-events: auto;
 }
 
 .sheet.is-open {

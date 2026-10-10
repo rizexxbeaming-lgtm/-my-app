@@ -122,6 +122,11 @@
         haptic("light");
       });
       els.daystrip.appendChild(btn);
+      if (key === state.selectedDate) {
+        requestAnimationFrame(() => {
+          btn.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+        });
+      }
     }
   }
 
